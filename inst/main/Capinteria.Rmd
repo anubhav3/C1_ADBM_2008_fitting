@@ -1,0 +1,142 @@
+---
+title: "Fitting ADBM to Capinteria food web"
+author: "Owen Petchey"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r}
+library(rdryad)
+library(janitor)
+library(tidyverse)
+library(here)
+
+source("https://raw.githubusercontent.com/opetchey/dumping_ground/master/ADBM_shiny/Plot.matrix.r")
+source(here("R/ADBM.functions.r"))
+```
+
+# Introduction
+
+This report shows how the allometric diet breadth model of [Petchey et al. (2008)](https://www.pnas.org/content/105/11/4191) was fit to empirical food web data. The report is basic and unrefined (purely functional in purpose).
+
+# Empirical data
+
+## 2008 Capinteria
+
+```{r}
+fw_name <- "Capinteria"
+capinteria2008.all.web.info <- readRDS(here(paste0("data/", fw_name, ".web.2008.RDS")))
+Plot.matrix(capinteria2008.all.web.info$predation.matrix)
+box()
+```
+
+## Capinteria data from Hechinger et al. (2011)
+
+The Capinteria food web data was downloaded from [here](https://esapubs.org/archive/ecol/E092/066/#data) and then processed (steps are not shown in this document). The food web is different to that used in Petchey et al. (2008).
+
+```{r warning = FALSE}
+
+capinteria.openaccess.all.web.info <- readRDS(here(paste0("data/", fw_name, ".web.openaccess.RDS")))
+Plot.matrix(capinteria.openaccess.all.web.info$predation.matrix)
+box()
+```
+
+
+# Fitting the model
+
+## Starting parameter values
+
+The search algorithm can get stuck in local optima, so the search is started multiple times each from a different location in parameter space. Those starting parameter values are loaded from a text file:
+
+```{r}
+ratio_initial_pars <- read.csv(here("data/ratio.initial.pars.txt"),
+                               header = FALSE)
+```
+
+
+## Fit model to 2008 Capinteria data
+
+Here the outcome is the same as in Petchey et al. (2008).
+
+```{r eval = FALSE}
+NM.RH.web_2008 <- NM.ratio(capinteria2008.all.web.info, ratio_initial_pars)
+```
+
+```{r eval = FALSE, echo = FALSE}
+saveRDS(NM.RH.web_2008, file=here(paste0("data/fitpar/",
+                                         fw_name, "NMRHweb_2008.RDS")))
+```
+
+```{r echo = FALSE}
+NM.RH.web_2008 <- readRDS(file=here(paste0("data/fitpar/",
+                                           fw_name, "NMRHweb_2008.RDS")))
+```
+
+```{r}
+Plot.matrix(NM.RH.web_2008$web)
+box()
+NM.RH.web_2008$power
+NM.RH.web_2008$pars
+sum(NM.RH.web_2008$web)
+sum(capinteria2008.all.web.info$predation.matrix)
+```
+
+
+
+## Fit model to open access Capinteria data
+
+```{r eval = FALSE}
+NM.RH.web_openaccess <- NM.ratio(capinteria.openaccess.all.web.info, ratio_initial_pars)
+```
+
+
+```{r eval = FALSE, echo = FALSE}
+saveRDS(NM.RH.web_openaccess,
+        file=here(paste0("data/fitpar/", fw_name, "NMRHweb_openaccess.RDS")))
+```
+
+```{r echo = FALSE}
+NM.RH.web_openaccess <- readRDS(file=here(paste0("data/fitpar/",
+                                            fw_name, "NMRHweb_openaccess.RDS")))
+```
+
+
+```{r}
+Plot.matrix(NM.RH.web_openaccess$web)
+box()
+NM.RH.web_openaccess$power
+NM.RH.web_openaccess$pars
+sum(NM.RH.web_openaccess$web)
+sum(capinteria.openaccess.all.web.info$predation.matrix)
+Compare.links(NM.RH.web_openaccess$web, capinteria.openaccess.all.web.info$predation.matrix)
+```
+
+
+
+
+# Using 2008 parameter estimates
+
+Using the 2008 parameter estimates gives the same results as in Petchey et al. (2008).
+
+```{r}
+a_2008 <- 2.54e-9
+ai_2008 <- -1.96
+aj_2008 <- 2.04
+b_2008 <- 5.74e-3
+
+EHL_2008 <- Ratio.allometric.EHL(M = capinteria2008.all.web.info$species.sizes,
+                           e = 1,
+                           r.a = 1, r.b = b_2008,
+                           a = a_2008, ai = ai_2008, aj = aj_2008,
+                           n = 1, ni=-3/4)
+web_2008 <- Get.web(EHL_2008)
+Plot.matrix(web_2008)
+box()
+Compare.links(web_2008, capinteria2008.all.web.info$predation.matrix)
+```
+

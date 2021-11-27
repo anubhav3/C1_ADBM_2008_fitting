@@ -1,0 +1,141 @@
+---
+title: "Fitting ADBM to Sierra Lakes food web"
+author: "Owen Petchey"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r}
+library(rdryad)
+library(janitor)
+library(tidyverse)
+library(here)
+
+source("https://raw.githubusercontent.com/opetchey/dumping_ground/master/ADBM_shiny/Plot.matrix.r")
+source(here("R/ADBM.functions.r"))
+```
+
+# Introduction
+
+This report shows how the allometric diet breadth model of [Petchey et al (2008)](https://www.pnas.org/content/105/11/4191) was fit to empirical food web data. The report is basic and unrefined (purely functional in purpose).
+
+# Empirical data
+
+## 2008 Sierra Lakes
+
+```{r}
+fw_name <- "Sierra Lakes"
+sierra2008.all.web.info <- readRDS(here("data/Sierra Lakes.web.2008.RDS"))
+Plot.matrix(sierra2008.all.web.info$predation.matrix)
+box()
+```
+
+## Sierra Lakes data from Brose et al (2008)
+
+The Sierra Lakes food web data was downloaded from [here](https://dx.doi.org/10.6084/m9.figshare.c.3298772) and then processed (steps are not shown in this document). The food web is similar to that used in Petchey et al (2008).
+
+```{r warning = FALSE}
+
+sierra.openaccess.all.web.info <- readRDS(here("data/Sierra Lakes.web.openaccess.RDS"))
+Plot.matrix(sierra.openaccess.all.web.info$predation.matrix)
+box()
+```
+
+
+# Fitting the model
+
+## Starting parameter values
+
+The search algorithm can get stuck in local optima, so the search is started multiple times each from a different location in parameter space. Those starting parameter values are loaded from a text file:
+
+```{r}
+ratio_initial_pars <- read.csv(here("data/ratio.initial.pars.txt"),
+                               header = FALSE)
+```
+
+
+## Fit model to 2008 Sierra Lakes data
+
+Here the outcome is the same as in Petchey et al (2008).
+
+```{r eval = FALSE}
+NM.RH.web_2008 <- NM.ratio(sierra2008.all.web.info, ratio_initial_pars)
+```
+
+```{r eval = FALSE, echo = FALSE}
+saveRDS(NM.RH.web_2008, file=here(paste0("data/fitpar/",
+                                         fw_name, "NMRHweb_2008.RDS")))
+```
+
+```{r echo = FALSE}
+NM.RH.web_2008 <- readRDS(file=here(paste0("data/fitpar/",
+                                           fw_name, "NMRHweb_2008.RDS")))
+```
+
+```{r}
+Plot.matrix(NM.RH.web_2008$web)
+box()
+NM.RH.web_2008$power
+NM.RH.web_2008$pars
+sum(NM.RH.web_2008$web)
+sum(sierra2008.all.web.info$predation.matrix)
+```
+
+
+
+## Fit model to open access Sierra Lakes data
+
+```{r eval = FALSE}
+NM.RH.web_openaccess <- NM.ratio(sierra.openaccess.all.web.info, ratio_initial_pars)
+```
+
+
+```{r eval = FALSE, echo = FALSE}
+saveRDS(NM.RH.web_openaccess,
+        file=here(paste0("data/fitpar/", fw_name, "NMRHweb_openaccess.RDS")))
+```
+
+```{r echo = FALSE}
+NM.RH.web_openaccess <- readRDS(file=here(paste0("data/fitpar/",
+                                            fw_name, "NMRHweb_openaccess.RDS")))
+```
+
+
+```{r}
+Plot.matrix(NM.RH.web_openaccess$web)
+box()
+NM.RH.web_openaccess$power
+NM.RH.web_openaccess$pars
+sum(NM.RH.web_openaccess$web)
+sum(sierra.openaccess.all.web.info$predation.matrix)
+```
+
+
+
+
+# Using 2008 parameter estimates
+
+Using the 2008 parameter estimates gives the same results as in Petchey et al (2008).
+
+```{r}
+a_2008 <- 5.97e-10
+ai_2008 <- -2.11
+aj_2008 <- -2.02
+b_2008 <- 3.34e-1
+
+EHL_2008 <- Ratio.allometric.EHL(M = sierra2008.all.web.info$species.sizes,
+                           e = 1,
+                           r.a = 1, r.b = b_2008,
+                           a = a_2008, ai = ai_2008, aj = aj_2008,
+                           n = 1, ni=-3/4)
+web_2008 <- Get.web(EHL_2008)
+Plot.matrix(web_2008)
+box()
+Compare.links(web_2008, sierra2008.all.web.info$predation.matrix)
+```
+

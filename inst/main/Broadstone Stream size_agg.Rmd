@@ -1,0 +1,79 @@
+---
+title: "Fitting ADBM to Broadstone Stream (size aggregation) food web"
+author: "Owen Petchey"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r}
+library(rdryad)
+library(janitor)
+library(tidyverse)
+library(here)
+
+source("https://raw.githubusercontent.com/opetchey/dumping_ground/master/ADBM_shiny/Plot.matrix.r")
+source(here("R/ADBM.functions.r"))
+```
+
+# Introduction
+
+This report shows how the allometric diet breadth model of [Petchey et al (2008)](https://www.pnas.org/content/105/11/4191) was fit to empirical food web data. The report is basic and unrefined (purely functional in purpose).
+
+# Empirical data
+
+## Broadstone Stream (size aggregation) data from Guy Woodward (2021)
+
+The Broadstone Stream food web data was downloaded from [here](https://dx.doi.org/10.5281/zenodo.5575040) and then processed (steps are not shown in this document).
+
+```{r warning = FALSE}
+fw_name <- "Broadstone Stream size_agg"
+broadstone_size_agg.openaccess.all.web.info <- readRDS(here(paste0("data/", fw_name, ".web.openaccess.RDS")))
+Plot.matrix(broadstone_size_agg.openaccess.all.web.info$predation.matrix)
+box()
+```
+
+
+# Fitting the model
+
+## Starting parameter values
+
+The search algorithm can get stuck in local optima, so the search is started multiple times each from a different location in parameter space. Those starting parameter values are loaded from a text file:
+
+```{r}
+ratio_initial_pars <- read.csv(here("data/ratio.initial.pars.txt"),
+                               header = FALSE)
+```
+
+
+## Fit model to open access Broadstone Stream data
+
+```{r eval = FALSE}
+NM.RH.web_openaccess <- NM.ratio(broadstone_size_agg.openaccess.all.web.info, ratio_initial_pars)
+```
+
+
+```{r eval = FALSE, echo = FALSE}
+saveRDS(NM.RH.web_openaccess,
+        file=here(paste0("data/fitpar/", fw_name, "NMRHweb_openaccess.RDS")))
+```
+
+```{r echo = FALSE}
+NM.RH.web_openaccess <- readRDS(file=here(paste0("data/fitpar/",
+                                            fw_name, "NMRHweb_openaccess.RDS")))
+```
+
+
+```{r}
+Plot.matrix(NM.RH.web_openaccess$web)
+box()
+NM.RH.web_openaccess$power
+NM.RH.web_openaccess$pars
+sum(NM.RH.web_openaccess$web)
+sum(broadstone_size_agg.openaccess.all.web.info$predation.matrix)
+Compare.links(NM.RH.web_openaccess$web, broadstone_size_agg.openaccess.all.web.info$predation.matrix)
+```

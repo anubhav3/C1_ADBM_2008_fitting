@@ -1,0 +1,52 @@
+---
+title: "Fitting ADBM to Grasslands food web"
+author: "Owen Petchey"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r}
+library(rdryad)
+library(janitor)
+library(tidyverse)
+library(here)
+
+source("https://raw.githubusercontent.com/opetchey/dumping_ground/master/ADBM_shiny/Plot.matrix.r")
+source(here("R/ADBM.functions.r"))
+```
+
+# Introduction
+
+This report shows how the allometric diet breadth model of [Petchey et al. (2008)](https://www.pnas.org/content/105/11/4191) was fit to empirical food web data. The report is basic and unrefined (purely functional in purpose).
+
+# Empirical data
+
+## 2008 Grasslands
+
+```{r}
+fw_name <- "Grasslands"
+grasslands2008.all.web.info <- readRDS(here(paste0("data/", fw_name, ".web.2008.RDS")))
+Plot.matrix(grasslands2008.all.web.info$predation.matrix)
+box()
+```
+
+## Grasslands data from Brose et al. (2008)
+
+The Grasslands food web data was downloaded from [here](https://dx.doi.org/10.6084/m9.figshare.c.3298772) and then processed (steps are not shown in this document). The food web is exactly same as that used in Petchey et al. (2008).
+
+```{r warning = FALSE}
+
+grasslands.openaccess.all.web.info <- readRDS(here(paste0("data/", fw_name, ".web.openaccess.RDS")))
+Plot.matrix(grasslands.openaccess.all.web.info$predation.matrix)
+box()
+```
+
+
+# Fitting the model
+
+The Nelder-Mead method does not converge for the Grasslands food web. 
